@@ -8,9 +8,9 @@ class AddressForm extends StatefulWidget {
 
   AddressForm(
     this.address, {
-    @required this.onUpdate,
-    @required this.onDelete,
-    Key key,
+    required this.onUpdate,
+    required this.onDelete,
+    Key? key,
   }) : super(key: key);
 
   @override
