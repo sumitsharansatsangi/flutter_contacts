@@ -671,9 +671,44 @@ class FlutterContacts {
             }
         }
 
-        fun openExternalPickOrInsert(activity: Activity?, context: Context?, insert: Boolean) {
+        fun openExternalPickOrInsert(activity: Activity?, context: Context?, insert: Boolean, contact: Map<String, Any?>?) {
             if (activity == null && context == null) return
             var intent = Intent(if (insert) Intent.ACTION_INSERT else Intent.ACTION_PICK, Contacts.CONTENT_URI)
+
+            // Prepopulate fields if contact is provided
+            if (contact != null) {
+                val parsedContact = Contact.fromMap(contact)
+
+                var fullName = parsedContact.displayName
+                if (fullName.isEmpty()) {
+                    fullName = (parsedContact.name.first + " " + parsedContact.name.last).trim()
+                }
+                if (fullName.isNotEmpty()) {
+                    intent.putExtra(ContactsContract.Intents.Insert.NAME, fullName)
+                }
+
+                if (parsedContact.phones.isNotEmpty()) {
+                    intent.putExtra(ContactsContract.Intents.Insert.PHONE, parsedContact.phones.first().number)
+                }
+
+                if (parsedContact.emails.isNotEmpty()) {
+                    intent.putExtra(ContactsContract.Intents.Insert.EMAIL, parsedContact.emails.first().address)
+                }
+
+                if (parsedContact.addresses.isNotEmpty()) {
+                    intent.putExtra(ContactsContract.Intents.Insert.POSTAL, parsedContact.addresses.first().address)
+                }
+
+                if (parsedContact.organizations.isNotEmpty()) {
+                    intent.putExtra(ContactsContract.Intents.Insert.COMPANY, parsedContact.organizations.first().company)
+                    intent.putExtra(ContactsContract.Intents.Insert.JOB_TITLE, parsedContact.organizations.first().title)
+                }
+
+                if (parsedContact.notes.isNotEmpty()) {
+                    intent.putExtra(ContactsContract.Intents.Insert.NOTES, parsedContact.notes.first().note)
+                }
+            }
+
             // https://developer.android.com/training/contacts-provider/modify-data#add-the-navigation-flag
             intent.putExtra("finishActivityOnSaveCompleted", true)
             if (activity != null) {
@@ -682,6 +717,10 @@ class FlutterContacts {
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context!!.startActivity(intent)
             }
+        }
+
+        fun openExternalPickOrInsert(activity: Activity?, context: Context?, insert: Boolean) {
+            openExternalPickOrInsert(activity, context, insert, null)
         }
 
         // getQuick is like `select(id = null, withProperties = false,

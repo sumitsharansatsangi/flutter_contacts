@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:after_layout/after_layout.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter/material.dart';
@@ -70,14 +72,11 @@ class _ContactListPageState extends State<ContactListPage>
           actions: <Widget>[
             PopupMenuButton<String>(
               onSelected: _handleOverflowSelected,
-              itemBuilder: (BuildContext context) {
-                return ['Groups'].map((String choice) {
-                  return PopupMenuItem<String>(
-                    value: choice,
-                    child: Text(choice),
-                  );
-                }).toList();
-              },
+              itemBuilder: (_) => [
+                'Groups',
+                'Insert external',
+                'Insert external (prepopulated)',
+              ].map(_menuItemBuilder).toList(),
             ),
           ],
         ),
@@ -96,21 +95,52 @@ class _ContactListPageState extends State<ContactListPage>
       return Center(child: CircularProgressIndicator());
     }
     return ListView.builder(
-        itemCount: _contacts.length,
-        itemBuilder: (context, i) {
-          final contact = _contacts[i];
-          return ListTile(
-            leading: avatar(contact, 18.0),
-            title: Text(contact.displayName),
-            onTap: () =>
-                Navigator.of(context).pushNamed('/contact', arguments: contact),
-          );
-        });
+      itemCount: _contacts.length,
+      itemBuilder: (context, i) {
+        final contact = _contacts[i];
+        return ListTile(
+          leading: avatar(contact, 18.0),
+          title: Text(contact.displayName),
+          onTap: () => Navigator.of(context).pushNamed(
+            '/contact',
+            arguments: contact,
+          ),
+        );
+      },
+    );
   }
 
   void _handleOverflowSelected(String value) {
-    if (value == 'Groups') {
-      Navigator.of(context).pushNamed('/groups');
+    switch (value) {
+      case 'Groups':
+        Navigator.of(context).pushNamed('/groups');
+        break;
+      case 'Insert external':
+        FlutterContacts.openExternalInsert();
+        break;
+      case 'Insert external (prepopulated)':
+        FlutterContacts.openExternalInsert(
+          Contact(
+            name: Name(first: 'John', last: 'Doe'),
+            phones: [Phone('+1 555-123-4567')],
+            emails: [Email('john.doe@gmail.com')],
+            addresses: [Address('123 Main St')],
+            websites: [Website('https://flutter.dev')],
+            organizations: [
+              Organization(company: 'Flutter', title: 'Developer')
+            ],
+          ),
+        );
+        break;
+      default:
+        log('Unknown overflow menu item: $value');
     }
+  }
+
+  static PopupMenuItem<String> _menuItemBuilder(String choice) {
+    return PopupMenuItem<String>(
+      value: choice,
+      child: Text(choice),
+    );
   }
 }

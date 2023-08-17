@@ -29,6 +29,10 @@ apply plugin: 'kotlin-android'
 android {
     compileSdkVersion 33
 
+    if (!project.hasProperty("namespace")) {
+        namespace 'co.quis.flutter_contacts'
+    }
+
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
