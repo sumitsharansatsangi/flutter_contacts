@@ -47,10 +47,10 @@ class FlutterContacts {
         private val YYYY_MM_DD = """\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|30|31)""".toRegex()
         private val MM_DD = """--(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|30|31)""".toRegex()
 
-        val REQUEST_CODE_VIEW = 77881
-        val REQUEST_CODE_EDIT = 77882
-        val REQUEST_CODE_PICK = 77883
-        val REQUEST_CODE_INSERT = 77884
+        const val REQUEST_CODE_VIEW = 77881
+        const val REQUEST_CODE_EDIT = 77882
+        const val REQUEST_CODE_PICK = 77883
+        const val REQUEST_CODE_INSERT = 77884
 
         fun select(
             resolver: ContentResolver,
@@ -71,7 +71,7 @@ class FlutterContacts {
             }
 
             // All fields we care about – ID and display name are always included.
-            var projection = mutableListOf(
+            val projection = mutableListOf(
                 Data.CONTACT_ID,
                 Data.MIMETYPE,
                 Contacts.DISPLAY_NAME_PRIMARY,
@@ -144,9 +144,9 @@ class FlutterContacts {
                 projection.add(GroupMembership.GROUP_ROW_ID)
             }
 
-            val groups = if (withGroups) fetchGroups(resolver) else mapOf<String, PGroup>()
+            val groups = if (withGroups) fetchGroups(resolver) else mapOf()
 
-            var selectionClauses = mutableListOf<String>()
+            val selectionClauses = mutableListOf<String>()
             if (!includeNonVisible) {
                 // This drops contacts not part of any group.
                 // See: https://stackoverflow.com/questions/28665587/what-does-contactscontract-contacts-in-visible-group-mean-in-android
@@ -179,23 +179,23 @@ class FlutterContacts {
             )
 
             // List of all contacts.
-            var contacts = mutableListOf<Contact>()
+            val contacts = mutableListOf<Contact>()
             if (cursor == null) {
                 return listOf()
             }
 
             // Maps contact ID to its index in `contacts`.
-            var index = mutableMapOf<String, Int>()
+            val index = mutableMapOf<String, Int>()
 
-            fun getString(col: String): String = cursor.getString(cursor.getColumnIndex(col)) ?: ""
-            fun getInt(col: String): Int = cursor.getInt(cursor.getColumnIndex(col)) ?: 0
+            fun getString(col: String): String = cursor.getString(cursor.getColumnIndexOrThrow(col)) ?: ""
+            fun getInt(col: String): Int = cursor.getInt(cursor.getColumnIndexOrThrow(col))
             fun getBool(col: String): Boolean = getInt(col) == 1
 
             while (cursor.moveToNext()) {
                 // ID and display name.
                 val id = if (returnUnifiedContacts) getString(Data.CONTACT_ID) else getString(Data.RAW_CONTACT_ID)
                 if (id !in index) {
-                    var contact = Contact(
+                    val contact = Contact(
                         /*id=*/id,
                         /*displayName=*/getString(Contacts.DISPLAY_NAME_PRIMARY),
                         isStarred = getBool(Contacts.STARRED)
@@ -208,8 +208,9 @@ class FlutterContacts {
                         val displayPhotoUri: Uri =
                             Uri.withAppendedPath(contactUri, Contacts.Photo.DISPLAY_PHOTO)
                         try {
-                            var fis: InputStream? = resolver.openInputStream(displayPhotoUri)
+                            val fis: InputStream? = resolver.openInputStream(displayPhotoUri)
                             contact.photo = fis?.readBytes()
+                            fis?.close()
                         } catch (e: FileNotFoundException) {
                             // This happens when no high-resolution photo exists, and is
                             // a common situation.
@@ -219,14 +220,14 @@ class FlutterContacts {
                     index[id] = contacts.size
                     contacts.add(contact)
                 }
-                var contact: Contact = contacts[index[id]!!]
+                val contact: Contact = contacts[index[id]!!]
 
                 // The MIME type of the data in current row (e.g. phone, email, etc).
                 val mimetype = getString(Data.MIMETYPE)
 
                 // Thumbnails.
                 if (withThumbnail && mimetype == Photo.CONTENT_ITEM_TYPE) {
-                    contact.thumbnail = cursor.getBlob(cursor.getColumnIndex(Photo.PHOTO))
+                    contact.thumbnail = cursor.getBlob(cursor.getColumnIndexOrThrow(Photo.PHOTO))
                 }
 
                 // All properties (phones, emails, etc).
@@ -374,8 +375,8 @@ class FlutterContacts {
                                     if (label == "custom") getEventCustomLabel(cursor) else ""
                                 val event = PEvent(
                                     year,
-                                    month!!,
-                                    day!!,
+                                    month,
+                                    day,
                                     label,
                                     customLabel
                                 )
@@ -386,7 +387,7 @@ class FlutterContacts {
                             val note: String = getString(Note.NOTE)
                             // It seems that every contact has an empty note by default;
                             // filter empty notes to avoid confusion.
-                            if (!note.isEmpty()) {
+                            if (note.isNotEmpty()) {
                                 val note = PNote(getString(Note.NOTE))
                                 contact.notes += note
                             }
@@ -456,11 +457,11 @@ class FlutterContacts {
 
             // Update starred status.
             val contentValues = ContentValues()
-            contentValues.put(ContactsContract.RawContacts.STARRED, if (contact.isStarred) 1 else 0)
+            contentValues.put(RawContacts.STARRED, if (contact.isStarred) 1 else 0)
             resolver.update(
-                ContactsContract.RawContacts.CONTENT_URI,
+                RawContacts.CONTENT_URI,
                 contentValues,
-                ContactsContract.RawContacts._ID + "=?",
+                RawContacts._ID + "=?",
                 /*selectionArgs=*/arrayOf(rawId.toString())
             )
 
@@ -558,11 +559,11 @@ class FlutterContacts {
 
             // Update starred status.
             val contentValues = ContentValues()
-            contentValues.put(ContactsContract.Contacts.STARRED, if (contact.isStarred) 1 else 0)
+            contentValues.put(Contacts.STARRED, if (contact.isStarred) 1 else 0)
             resolver.update(
-                ContactsContract.Contacts.CONTENT_URI,
+                Contacts.CONTENT_URI,
                 contentValues,
-                ContactsContract.Contacts._ID + "=?",
+                Contacts._ID + "=?",
                 /*selectionArgs=*/arrayOf(contactId)
             )
 
@@ -609,7 +610,7 @@ class FlutterContacts {
         fun insertGroup(resolver: ContentResolver, groupMap: Map<String, Any>): Map<String, Any> {
             val ops = mutableListOf<ContentProviderOperation>()
 
-            var group = PGroup.fromMap(groupMap)
+            val group = PGroup.fromMap(groupMap)
 
             ops.add(
                 ContentProviderOperation.newInsert(Groups.CONTENT_URI)
@@ -659,21 +660,21 @@ class FlutterContacts {
         fun openExternalViewOrEdit(activity: Activity?, context: Context?, id: String, edit: Boolean) {
             if (activity == null && context == null) return
             val uri = Uri.withAppendedPath(Contacts.CONTENT_URI, id)
-            var intent = Intent(if (edit) Intent.ACTION_EDIT else Intent.ACTION_VIEW)
+            val intent = Intent(if (edit) Intent.ACTION_EDIT else Intent.ACTION_VIEW)
             intent.setDataAndType(uri, Contacts.CONTENT_ITEM_TYPE)
             // https://developer.android.com/training/contacts-provider/modify-data#add-the-navigation-flag
             intent.putExtra("finishActivityOnSaveCompleted", true)
             if (activity != null) {
-                activity!!.startActivityForResult(intent, if (edit) REQUEST_CODE_EDIT else REQUEST_CODE_VIEW)
+                activity.startActivityForResult(intent, if (edit) REQUEST_CODE_EDIT else REQUEST_CODE_VIEW)
             } else {
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 context!!.startActivity(intent)
             }
         }
 
         fun openExternalPickOrInsert(activity: Activity?, context: Context?, insert: Boolean, contact: Map<String, Any?>?) {
             if (activity == null && context == null) return
-            var intent = Intent(if (insert) Intent.ACTION_INSERT else Intent.ACTION_PICK, Contacts.CONTENT_URI)
+            val intent = Intent(if (insert) Intent.ACTION_INSERT else Intent.ACTION_PICK, Contacts.CONTENT_URI)
 
             // Prepopulate fields if contact is provided
             if (contact != null) {
@@ -712,9 +713,9 @@ class FlutterContacts {
             // https://developer.android.com/training/contacts-provider/modify-data#add-the-navigation-flag
             intent.putExtra("finishActivityOnSaveCompleted", true)
             if (activity != null) {
-                activity!!.startActivityForResult(intent, if (insert) REQUEST_CODE_INSERT else REQUEST_CODE_PICK)
+                activity.startActivityForResult(intent, if (insert) REQUEST_CODE_INSERT else REQUEST_CODE_PICK)
             } else {
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 context!!.startActivity(intent)
             }
         }
@@ -741,7 +742,7 @@ class FlutterContacts {
             )
 
             // List of all contacts.
-            var contacts = mutableListOf<Contact>()
+            val contacts = mutableListOf<Contact>()
             if (cursor == null) {
                 return listOf()
             }
@@ -749,9 +750,9 @@ class FlutterContacts {
             while (cursor.moveToNext()) {
                 contacts.add(
                     Contact(
-                        /*id=*/(cursor.getString(cursor.getColumnIndex(Contacts._ID)) ?: ""),
-                        /*displayName=*/(cursor.getString(cursor.getColumnIndex(Contacts.DISPLAY_NAME_PRIMARY)) ?: ""),
-                        isStarred = (cursor.getInt(cursor.getColumnIndex(Contacts.DISPLAY_NAME_PRIMARY)) ?: 0) == 0
+                        /*id=*/(cursor.getString(cursor.getColumnIndexOrThrow(Contacts._ID)) ?: ""),
+                        /*displayName=*/(cursor.getString(cursor.getColumnIndexOrThrow(Contacts.DISPLAY_NAME_PRIMARY)) ?: ""),
+                        isStarred = cursor.getInt(cursor.getColumnIndexOrThrow(Contacts.DISPLAY_NAME_PRIMARY)) == 0
                     )
                 )
             }
@@ -761,8 +762,7 @@ class FlutterContacts {
         }
 
         private fun getPhoneLabel(cursor: Cursor): String {
-            val type = cursor.getInt(cursor.getColumnIndex(Phone.TYPE))
-            return when (type) {
+            return when (cursor.getInt(cursor.getColumnIndexOrThrow(Phone.TYPE))) {
                 Phone.TYPE_ASSISTANT -> "assistant"
                 Phone.TYPE_CALLBACK -> "callback"
                 Phone.TYPE_CAR -> "car"
@@ -799,21 +799,19 @@ class FlutterContacts {
                 /*selection=*/null,
                 /*selectionArgs=*/null,
                 /*sortOrder=*/null
-            )
-            if (cursor == null) {
-                return mapOf()
-            }
-            var groups = mutableMapOf<String, PGroup>()
+            ) ?: return mapOf()
+            val groups = mutableMapOf<String, PGroup>()
             while (cursor.moveToNext()) {
-                val groupId = cursor.getString(cursor.getColumnIndex(Groups._ID)) ?: ""
-                val groupName = cursor.getString(cursor.getColumnIndex(Groups.TITLE)) ?: ""
+                val groupId = cursor.getString(cursor.getColumnIndexOrThrow(Groups._ID)) ?: ""
+                val groupName = cursor.getString(cursor.getColumnIndexOrThrow(Groups.TITLE)) ?: ""
                 groups[groupId] = PGroup(id = groupId, name = groupName)
             }
+            cursor.close()
             return groups
         }
 
         private fun getPhoneCustomLabel(cursor: Cursor): String {
-            return cursor.getString(cursor.getColumnIndex(Phone.LABEL)) ?: ""
+            return cursor.getString(cursor.getColumnIndexOrThrow(Phone.LABEL)) ?: ""
         }
 
         private data class PhoneLabelPair(val label: Int, val customLabel: String)
@@ -845,8 +843,7 @@ class FlutterContacts {
         }
 
         private fun getEmailLabel(cursor: Cursor): String {
-            val type = cursor.getInt(cursor.getColumnIndex(Email.TYPE))
-            return when (type) {
+            return when (cursor.getInt(cursor.getColumnIndexOrThrow(Email.TYPE))) {
                 Email.TYPE_CUSTOM -> "custom"
                 Email.TYPE_HOME -> "home"
                 Email.TYPE_MOBILE -> "mobile"
@@ -857,7 +854,7 @@ class FlutterContacts {
         }
 
         private fun getEmailCustomLabel(cursor: Cursor): String {
-            return cursor.getString(cursor.getColumnIndex(Email.LABEL)) ?: ""
+            return cursor.getString(cursor.getColumnIndexOrThrow(Email.LABEL)) ?: ""
         }
 
         private data class EmailLabelPair(val label: Int, val customLabel: String)
@@ -873,8 +870,7 @@ class FlutterContacts {
         }
 
         private fun getAddressLabel(cursor: Cursor): String {
-            val type = cursor.getInt(cursor.getColumnIndex(StructuredPostal.TYPE))
-            return when (type) {
+            return when (cursor.getInt(cursor.getColumnIndexOrThrow(StructuredPostal.TYPE))) {
                 StructuredPostal.TYPE_HOME -> "home"
                 StructuredPostal.TYPE_OTHER -> "other"
                 StructuredPostal.TYPE_WORK -> "work"
@@ -884,7 +880,7 @@ class FlutterContacts {
         }
 
         private fun getAddressCustomLabel(cursor: Cursor): String {
-            return cursor.getString(cursor.getColumnIndex(StructuredPostal.LABEL)) ?: ""
+            return cursor.getString(cursor.getColumnIndexOrThrow(StructuredPostal.LABEL)) ?: ""
         }
 
         private data class AddressLabelPair(val label: Int, val customLabel: String)
@@ -899,8 +895,7 @@ class FlutterContacts {
         }
 
         private fun getWebsiteLabel(cursor: Cursor): String {
-            val type = cursor.getInt(cursor.getColumnIndex(Website.TYPE))
-            return when (type) {
+            return when (cursor.getInt(cursor.getColumnIndexOrThrow(Website.TYPE))) {
                 Website.TYPE_BLOG -> "blog"
                 Website.TYPE_FTP -> "ftp"
                 Website.TYPE_HOME -> "home"
@@ -914,7 +909,7 @@ class FlutterContacts {
         }
 
         private fun getWebsiteCustomLabel(cursor: Cursor): String {
-            return cursor.getString(cursor.getColumnIndex(Website.LABEL)) ?: ""
+            return cursor.getString(cursor.getColumnIndexOrThrow(Website.LABEL)) ?: ""
         }
 
         private data class WebsiteLabelPair(val label: Int, val customLabel: String)
@@ -933,8 +928,7 @@ class FlutterContacts {
         }
 
         private fun getSocialMediaLabel(cursor: Cursor): String {
-            val type = cursor.getInt(cursor.getColumnIndex(Im.PROTOCOL))
-            return when (type) {
+            return when (cursor.getInt(cursor.getColumnIndexOrThrow(Im.PROTOCOL))) {
                 Im.PROTOCOL_AIM -> "aim"
                 Im.PROTOCOL_GOOGLE_TALK -> "googleTalk"
                 Im.PROTOCOL_ICQ -> "icq"
@@ -950,7 +944,7 @@ class FlutterContacts {
         }
 
         private fun getSocialMediaCustomLabel(cursor: Cursor): String {
-            return cursor.getString(cursor.getColumnIndex(Im.CUSTOM_PROTOCOL)) ?: ""
+            return cursor.getString(cursor.getColumnIndexOrThrow(Im.CUSTOM_PROTOCOL)) ?: ""
         }
 
         private data class SocialMediaLabelPair(val label: Int, val customLabel: String)
@@ -971,8 +965,7 @@ class FlutterContacts {
         }
 
         private fun getEventLabel(cursor: Cursor): String {
-            val type = cursor.getInt(cursor.getColumnIndex(Event.TYPE))
-            return when (type) {
+            return when (cursor.getInt(cursor.getColumnIndexOrThrow(Event.TYPE))) {
                 Event.TYPE_ANNIVERSARY -> "anniversary"
                 Event.TYPE_BIRTHDAY -> "birthday"
                 Event.TYPE_OTHER -> "other"
@@ -982,7 +975,7 @@ class FlutterContacts {
         }
 
         private fun getEventCustomLabel(cursor: Cursor): String {
-            return cursor.getString(cursor.getColumnIndex(Event.LABEL)) ?: ""
+            return cursor.getString(cursor.getColumnIndexOrThrow(Event.LABEL)) ?: ""
         }
 
         private data class EventLabelPair(val label: Int, val customLabel: String)
@@ -1001,11 +994,11 @@ class FlutterContacts {
             ops: MutableList<ContentProviderOperation>,
             rawContactId: String? = null
         ) {
-            fun emptyToNull(s: String): String? = if (s.isEmpty()) "" else s
+            fun emptyToNull(s: String): String = s.ifEmpty { "" }
             fun eventToDate(e: PEvent): String =
                 (if (e.year == null) "--" else "${e.year.toString().padStart(4, '0')}-") +
                     "${e.month.toString().padStart(2, '0')}-" +
-                    "${e.day.toString().padStart(2, '0')}"
+                        e.day.toString().padStart(2, '0')
             fun newInsert(): ContentProviderOperation.Builder =
                 if (rawContactId != null)
                     ContentProviderOperation
@@ -1030,7 +1023,7 @@ class FlutterContacts {
                     .withValue(StructuredName.PHONETIC_FAMILY_NAME, emptyToNull(name.lastPhonetic))
                     .build()
             )
-            if (!name.nickname.isEmpty()) {
+            if (name.nickname.isNotEmpty()) {
                 ops.add(
                     newInsert()
                         .withValue(Data.MIMETYPE, Nickname.CONTENT_ITEM_TYPE)
@@ -1132,7 +1125,7 @@ class FlutterContacts {
                 )
             }
             for (note in contact.notes) {
-                if (!note.note.isEmpty()) {
+                if (note.note.isNotEmpty()) {
                     ops.add(
                         newInsert()
                             .withValue(Data.MIMETYPE, Note.CONTENT_ITEM_TYPE)
@@ -1161,7 +1154,7 @@ class FlutterContacts {
                 ContentUris.withAppendedId(RawContacts.CONTENT_URI, rawContactId),
                 RawContacts.DisplayPhoto.CONTENT_DIRECTORY
             )
-            var fd: AssetFileDescriptor? = resolver.openAssetFileDescriptor(photoUri, "rw")
+            val fd: AssetFileDescriptor? = resolver.openAssetFileDescriptor(photoUri, "rw")
             if (fd != null) {
                 val os: OutputStream = fd.createOutputStream()
                 os.write(photo)

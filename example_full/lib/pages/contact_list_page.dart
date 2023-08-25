@@ -12,7 +12,7 @@ class ContactListPage extends StatefulWidget {
 
 class _ContactListPageState extends State<ContactListPage>
     with AfterLayoutMixin<ContactListPage> {
-  List<Contact> _contacts;
+  List<Contact> _contacts = [];
   bool _permissionDenied = false;
 
   @override
@@ -33,7 +33,7 @@ class _ContactListPageState extends State<ContactListPage>
   Future _fetchContacts() async {
     if (!await FlutterContacts.requestPermission()) {
       setState(() {
-        _contacts = null;
+        _contacts = [];
         _permissionDenied = true;
       });
       return;
@@ -91,7 +91,7 @@ class _ContactListPageState extends State<ContactListPage>
     if (_permissionDenied) {
       return Center(child: Text('Permission denied'));
     }
-    if (_contacts == null) {
+    if (_contacts.isEmpty) {
       return Center(child: CircularProgressIndicator());
     }
     return ListView.builder(

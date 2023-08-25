@@ -10,7 +10,7 @@ class GroupsPage extends StatefulWidget {
 
 class _GroupsPageState extends State<GroupsPage>
     with AfterLayoutMixin<GroupsPage> {
-  List<Group> _groups;
+  List<Group> groups = [];
 
   @override
   void afterFirstLayout(BuildContext context) {
@@ -18,8 +18,8 @@ class _GroupsPageState extends State<GroupsPage>
   }
 
   Future _fetchGroups() async {
-    final groups = await FlutterContacts.getGroups();
-    setState(() => _groups = groups);
+    final _groups = await FlutterContacts.getGroups();
+    setState(() => groups = _groups);
   }
 
   @override
@@ -35,13 +35,13 @@ class _GroupsPageState extends State<GroupsPage>
       );
 
   Widget _body() {
-    if (_groups == null) {
+    if (groups.isEmpty) {
       return Center(child: CircularProgressIndicator());
     }
     return ListView.builder(
-        itemCount: _groups.length,
+        itemCount: groups.length,
         itemBuilder: (context, i) {
-          final group = _groups[i];
+          final group = groups[i];
           return ListTile(
             title: Text('${group.name} (id=${group.id})'),
             trailing: Row(
@@ -64,7 +64,7 @@ class _GroupsPageState extends State<GroupsPage>
 
   Future<void> _newGroup() async {
     final name = await prompt(context);
-    if (name.isNotEmpty) {
+    if (name != null) {
       final group = await FlutterContacts.insertGroup(Group('', name));
       print('Inserted group $group');
       await _fetchGroups();
@@ -73,7 +73,7 @@ class _GroupsPageState extends State<GroupsPage>
 
   Future<void> _renameGroup(Group group) async {
     final name = await prompt(context, initialValue: group.name);
-    if (name.isNotEmpty) {
+    if (name != null) {
       final updatedGroup =
           await FlutterContacts.updateGroup(Group(group.id, name));
       print('Updated group $updatedGroup');

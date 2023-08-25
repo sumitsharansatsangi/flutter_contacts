@@ -12,7 +12,6 @@ import 'package:flutter_contacts_example/pages/form_components/social_media_form
 import 'package:flutter_contacts_example/pages/form_components/website_form.dart';
 import 'package:flutter_contacts_example/util/avatar.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:pretty_json/pretty_json.dart';
 
 class EditContactPage extends StatefulWidget {
   @override
@@ -21,21 +20,22 @@ class EditContactPage extends StatefulWidget {
 
 class _EditContactPageState extends State<EditContactPage>
     with AfterLayoutMixin<EditContactPage> {
-  var _contact = Contact();
-  bool _isEdit = false;
-  void Function() _onUpdate;
+  Contact contact = Contact();
+  bool isEdit = false;
+  void Function()? onUpdate;
 
   final _imagePicker = ImagePicker();
 
   @override
   void afterFirstLayout(BuildContext context) {
-    final args =
-        ModalRoute.of(context).settings.arguments as Map<String, dynamic>;
-    if (args != null) {
+    if (ModalRoute.of(context) != null &&
+        ModalRoute.of(context)!.settings.arguments != null) {
+      final args =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
       setState(() {
-        _contact = args['contact'];
-        _isEdit = true;
-        _onUpdate = args['onUpdate'];
+        contact = args['contact'];
+        isEdit = true;
+        onUpdate = args['onUpdate'];
       });
     }
   }
@@ -44,7 +44,7 @@ class _EditContactPageState extends State<EditContactPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${_isEdit ? 'Edit' : 'New'} contact'),
+        title: Text('${isEdit ? 'Edit' : 'New'} contact'),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.remove_red_eye),
@@ -52,8 +52,8 @@ class _EditContactPageState extends State<EditContactPage>
               await showDialog(
                 context: context,
                 builder: (_) => AlertDialog(
-                  content: Text(prettyJson(
-                      _contact.toJson(withPhoto: false, withThumbnail: false))),
+                  content: Text(
+                      contact.toJson(withPhoto: false, withThumbnail: false).toString()),
                 ),
               );
             },
@@ -65,7 +65,7 @@ class _EditContactPageState extends State<EditContactPage>
                 context: context,
                 builder: (_) => AlertDialog(
                   content: Text(
-                      _contact.toVCard(withPhoto: false, includeDate: true)),
+                      contact.toVCard(withPhoto: false, includeDate: true)),
                 ),
               );
             },
@@ -73,12 +73,12 @@ class _EditContactPageState extends State<EditContactPage>
           IconButton(
             icon: Icon(Icons.save),
             onPressed: () async {
-              if (_isEdit) {
-                await _contact.update(withGroups: true);
+              if (isEdit) {
+                await contact.update(withGroups: true);
               } else {
-                await _contact.insert();
+                await contact.insert();
               }
-              if (_onUpdate != null) _onUpdate();
+              if (onUpdate != null) onUpdate!();
               Navigator.of(context).pop();
             },
           ),
@@ -117,11 +117,11 @@ class _EditContactPageState extends State<EditContactPage>
       ];
 
   Future _pickPhoto() async {
-    final photo = await _imagePicker.getImage(source: ImageSource.camera);
+    final photo = await _imagePicker.pickImage(source: ImageSource.camera);
     if (photo != null) {
       final bytes = await photo.readAsBytes();
       setState(() {
-        _contact.photo = bytes;
+        contact.photo = bytes;
       });
     }
   }
@@ -130,9 +130,9 @@ class _EditContactPageState extends State<EditContactPage>
         Center(
             child: InkWell(
           onTap: _pickPhoto,
-          child: avatar(_contact, 48, Icons.add),
+          child: avatar(contact, 48, Icons.add),
         )),
-        _contact.photo == null
+        contact.photo == null
             ? Container()
             : Align(
                 alignment: Alignment.topRight,
@@ -141,7 +141,7 @@ class _EditContactPageState extends State<EditContactPage>
                     PopupMenuItem(value: 'Delete', child: Text('Delete photo'))
                   ],
                   onSelected: (_) => setState(() {
-                    _contact.photo = null;
+                    contact.photo = null;
                   }),
                 ),
               ),
@@ -171,24 +171,20 @@ class _EditContactPageState extends State<EditContactPage>
           });
     }
     var buttons = <ElevatedButton>[];
-    if (addField != null) {
-      buttons.add(
-        ElevatedButton(
-          onPressed: onPressed,
-          child: Text('+ New'),
-        ),
-      );
-    }
-    if (clearAllFields != null) {
+    buttons.add(
+      ElevatedButton(
+        onPressed: onPressed,
+        child: Text('+ New'),
+      ),
+    );
       buttons.add(ElevatedButton(
-        onPressed: () {
-          clearAllFields();
-          setState(() {});
-        },
-        child: Text('Delete all'),
-      ));
-    }
-    if (buttons.isNotEmpty) {
+      onPressed: () {
+        clearAllFields();
+        setState(() {});
+      },
+      child: Text('Delete all'),
+    ));
+      if (buttons.isNotEmpty) {
       forms.add(Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: buttons,
@@ -212,96 +208,96 @@ class _EditContactPageState extends State<EditContactPage>
 
   Card _nameCard() => _fieldCard(
         'Name',
-        [_contact.name],
-        null,
+        [contact.name],
+        (){},
         (int i, dynamic n) => NameForm(
           n,
-          onUpdate: (name) => _contact.name = name,
+          onUpdate: (name) => contact.name = name,
           key: UniqueKey(),
         ),
-        null,
+        (){},
       );
 
   Card _phoneCard() => _fieldCard(
         'Phones',
-        _contact.phones,
-        () => _contact.phones = _contact.phones + [Phone('')],
+        contact.phones,
+        () => contact.phones = contact.phones + [Phone('')],
         (int i, dynamic p) => PhoneForm(
           p,
-          onUpdate: (phone) => _contact.phones[i] = phone,
-          onDelete: () => setState(() => _contact.phones.removeAt(i)),
+          onUpdate: (phone) => contact.phones[i] = phone,
+          onDelete: () => setState(() => contact.phones.removeAt(i)),
           key: UniqueKey(),
         ),
-        () => _contact.phones = [],
+        () => contact.phones = [],
       );
 
   Card _emailCard() => _fieldCard(
         'Emails',
-        _contact.emails,
-        () => _contact.emails = _contact.emails + [Email('')],
+        contact.emails,
+        () => contact.emails = contact.emails + [Email('')],
         (int i, dynamic e) => EmailForm(
           e,
-          onUpdate: (email) => _contact.emails[i] = email,
-          onDelete: () => setState(() => _contact.emails.removeAt(i)),
+          onUpdate: (email) => contact.emails[i] = email,
+          onDelete: () => setState(() => contact.emails.removeAt(i)),
           key: UniqueKey(),
         ),
-        () => _contact.emails = [],
+        () => contact.emails = [],
       );
 
   Card _addressCard() => _fieldCard(
         'Addresses',
-        _contact.addresses,
-        () => _contact.addresses = _contact.addresses + [Address('')],
+        contact.addresses,
+        () => contact.addresses = contact.addresses + [Address('')],
         (int i, dynamic a) => AddressForm(
           a,
-          onUpdate: (address) => _contact.addresses[i] = address,
-          onDelete: () => setState(() => _contact.addresses.removeAt(i)),
+          onUpdate: (address) => contact.addresses[i] = address,
+          onDelete: () => setState(() => contact.addresses.removeAt(i)),
           key: UniqueKey(),
         ),
-        () => _contact.addresses = [],
+        () => contact.addresses = [],
       );
 
   Card _organizationCard() => _fieldCard(
         'Organizations',
-        _contact.organizations,
+        contact.organizations,
         () =>
-            _contact.organizations = _contact.organizations + [Organization()],
+            contact.organizations = contact.organizations + [Organization()],
         (int i, dynamic o) => OrganizationForm(
           o,
-          onUpdate: (organization) => _contact.organizations[i] = organization,
-          onDelete: () => setState(() => _contact.organizations.removeAt(i)),
+          onUpdate: (organization) => contact.organizations[i] = organization,
+          onDelete: () => setState(() => contact.organizations.removeAt(i)),
           key: UniqueKey(),
         ),
-        () => _contact.organizations = [],
+        () => contact.organizations = [],
       );
 
   Card _websiteCard() => _fieldCard(
         'Websites',
-        _contact.websites,
-        () => _contact.websites = _contact.websites + [Website('')],
+        contact.websites,
+        () => contact.websites = contact.websites + [Website('')],
         (int i, dynamic w) => WebsiteForm(
           w,
-          onUpdate: (website) => _contact.websites[i] = website,
-          onDelete: () => setState(() => _contact.websites.removeAt(i)),
+          onUpdate: (website) => contact.websites[i] = website,
+          onDelete: () => setState(() => contact.websites.removeAt(i)),
           key: UniqueKey(),
         ),
-        () => _contact.websites = [],
+        () => contact.websites = [],
       );
 
   Card _socialMediaCard() => _fieldCard(
         'Social medias',
-        _contact.socialMedias,
-        () => _contact.socialMedias = _contact.socialMedias + [SocialMedia('')],
+        contact.socialMedias,
+        () => contact.socialMedias = contact.socialMedias + [SocialMedia('')],
         (int i, dynamic w) => SocialMediaForm(
           w,
-          onUpdate: (socialMedia) => _contact.socialMedias[i] = socialMedia,
-          onDelete: () => setState(() => _contact.socialMedias.removeAt(i)),
+          onUpdate: (socialMedia) => contact.socialMedias[i] = socialMedia,
+          onDelete: () => setState(() => contact.socialMedias.removeAt(i)),
           key: UniqueKey(),
         ),
-        () => _contact.socialMedias = [],
+        () => contact.socialMedias = [],
       );
 
-  Future<DateTime> _selectDate(BuildContext context) async => showDatePicker(
+  Future<DateTime?> _selectDate(BuildContext context) async => showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(1900),
@@ -309,54 +305,52 @@ class _EditContactPageState extends State<EditContactPage>
 
   Card _eventCard() => _fieldCard(
         'Events',
-        _contact.events,
+        contact.events,
         () async {
           final date = await _selectDate(context);
-          if (date != null) {
-            _contact.events = _contact.events +
-                [Event(year: date.year, month: date.month, day: date.day)];
-          }
-        },
+          if(date != null)
+          contact.events = contact.events +
+              [Event(year: date.year, month: date.month, day: date.day)];
+                },
         (int i, dynamic w) => EventForm(
           w,
-          onUpdate: (event) => _contact.events[i] = event,
-          onDelete: () => setState(() => _contact.events.removeAt(i)),
+          onUpdate: (event) => contact.events[i] = event,
+          onDelete: () => setState(() => contact.events.removeAt(i)),
           key: UniqueKey(),
         ),
-        () => _contact.events = [],
+        () => contact.events = [],
         createAsync: true,
       );
 
   Card _noteCard() => _fieldCard(
         'Notes',
-        _contact.notes,
-        () => _contact.notes = _contact.notes + [Note('')],
+        contact.notes,
+        () => contact.notes = contact.notes + [Note('')],
         (int i, dynamic w) => NoteForm(
           w,
-          onUpdate: null,
-          onDelete: () => setState(() => _contact.groups.removeAt(i)),
+          onUpdate: (n){},
+          onDelete: () => setState(() => contact.groups.removeAt(i)),
           key: UniqueKey(),
         ),
-        () => _contact.notes = [],
+        () => contact.notes = [],
       );
 
   Card _groupCard() => _fieldCard(
         'Groups',
-        _contact.groups,
+        contact.groups,
         () async {
-          final group = await _promptGroup(exclude: _contact.groups);
-          if (group != null) {
-            setState(() => _contact.groups = _contact.groups + [group]);
-          }
-        },
+          final group = await _promptGroup(exclude: contact.groups);
+          if(group != null)
+          setState(() => contact.groups = contact.groups + [group]);
+                },
         (int i, dynamic w) => ListTile(
-          title: Text(_contact.groups[i].name),
+          title: Text(contact.groups[i].name),
           trailing: IconButton(
-            onPressed: () => setState(() => _contact.groups.removeAt(i)),
+            onPressed: () => setState(() => contact.groups.removeAt(i)),
             icon: Icon(Icons.delete),
           ),
         ),
-        () => setState(() => _contact.groups = []),
+        () => setState(() => contact.groups = []),
       );
 
   Card _starredField() => Card(
@@ -367,20 +361,22 @@ class _EditContactPageState extends State<EditContactPage>
             Text('Starred'),
             SizedBox(width: 24.0),
             Checkbox(
-              value: _contact.isStarred,
-              onChanged: (bool isStarred) =>
-                  setState(() => _contact.isStarred = isStarred),
+              value: contact.isStarred,
+              onChanged: (bool? isStarred) {
+                if(isStarred != null)
+                setState(() => contact.isStarred = isStarred);
+              },
             ),
           ],
         ),
       );
 
-  Future<Group> _promptGroup({@required List<Group> exclude}) async {
+  Future<Group?> _promptGroup({required List<Group> exclude}) async {
     final excludeIds = exclude.map((x) => x.id).toSet();
     final groups = (await FlutterContacts.getGroups())
         .where((g) => !excludeIds.contains(g.id))
         .toList();
-    Group selectedGroup;
+    Group? selectedGroup;
     await showDialog(
       context: context,
       builder: (BuildContext ctx) => AlertDialog(

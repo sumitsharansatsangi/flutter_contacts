@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.ContactsContract
-import androidx.annotation.NonNull
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -29,8 +28,8 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
         private var activity: Activity? = null
         private var context: Context? = null
         private var resolver: ContentResolver? = null
-        private val permissionReadWriteCode: Int = 0
-        private val permissionReadOnlyCode: Int = 1
+        private const val permissionReadWriteCode: Int = 0
+        private const val permissionReadOnlyCode: Int = 1
         private var permissionResult: Result? = null
         private var viewResult: Result? = null
         private var editResult: Result? = null
@@ -40,16 +39,16 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
 
     // --- FlutterPlugin implementation ---
 
-    override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        val channel = MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "github.com/QuisApp/flutter_contacts")
-        val eventChannel = EventChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "github.com/QuisApp/flutter_contacts/events")
+    override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+        val channel = MethodChannel(flutterPluginBinding.flutterEngine.dartExecutor, "github.com/QuisApp/flutter_contacts")
+        val eventChannel = EventChannel(flutterPluginBinding.flutterEngine.dartExecutor, "github.com/QuisApp/flutter_contacts/events")
         channel.setMethodCallHandler(FlutterContactsPlugin())
         eventChannel.setStreamHandler(FlutterContactsPlugin())
         context = flutterPluginBinding.applicationContext
         resolver = context!!.contentResolver
     }
 
-    override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {}
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {}
 
     // --- ActivityAware implementation ---
 
@@ -57,7 +56,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
 
     override fun onDetachedFromActivityForConfigChanges() { activity = null }
 
-    override fun onReattachedToActivityForConfigChanges(@NonNull binding: ActivityPluginBinding) {
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         activity = binding.activity
         binding.addRequestPermissionsResultListener(this)
         binding.addActivityResultListener(this)
@@ -86,7 +85,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
                 if (editResult != null) {
                     // Result is of the form:
                     // content://com.android.contacts/contacts/lookup/<hash>/<id>
-                    val id = intent?.getData()?.getLastPathSegment()
+                    val id = intent?.data?.lastPathSegment
                     editResult!!.success(id)
                     editResult = null
                 }
@@ -94,7 +93,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
                 if (pickResult != null) {
                     // Result is of the form:
                     // content://com.android.contacts/contacts/lookup/<hash>/<id>
-                    val id = intent?.getData()?.getLastPathSegment()
+                    val id = intent?.data?.lastPathSegment
                     pickResult!!.success(id)
                     pickResult = null
                 }
@@ -103,7 +102,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
                     // Result is of the form:
                     // content://com.android.contacts/raw_contacts/<raw_id>
                     // So we need to get the ID from the raw ID.
-                    val rawId = intent?.getData()?.getLastPathSegment()
+                    val rawId = intent?.data?.lastPathSegment
                     if (rawId != null) {
                         val contacts: List<Map<String, Any?>> =
                             FlutterContacts.select(
@@ -133,6 +132,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
     }
 
     // --- RequestPermissionsResultListener implementation ---
+
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -166,7 +166,8 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
 
     // --- MethodCallHandler implementation ---
 
-    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+
+    override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
             // Requests permission to read/write contacts.
             "requestPermission" ->
@@ -194,7 +195,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
             // Selects fields for request contact, or for all contacts.
             "select" ->
                 GlobalScope.launch(Dispatchers.IO) { // runs in a background thread
-                    val args = call.arguments as List<Any>
+                    val args = call.arguments as List<*>
                     val id = args[0] as String?
                     val withProperties = args[1] as Boolean
                     val withThumbnail = args[2] as Boolean
@@ -223,8 +224,8 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
             // Inserts a new contact and return it.
             "insert" ->
                 GlobalScope.launch(Dispatchers.IO) {
-                    val args = call.arguments as List<Any>
-                    val contact = args[0] as Map<String, Any>
+                    val args = call.arguments as List<*>
+                    val contact = args[0] as Map<String, Any?>
                     val insertedContact: Map<String, Any?>? =
                         FlutterContacts.insert(resolver!!, contact)
                     GlobalScope.launch(Dispatchers.Main) {
@@ -238,8 +239,8 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
             // Updates an existing contact and returns it.
             "update" ->
                 GlobalScope.launch(Dispatchers.IO) {
-                    val args = call.arguments as List<Any>
-                    val contact = args[0] as Map<String, Any>
+                    val args = call.arguments as List<*>
+                    val contact = args[0] as Map<String, Any?>
                     val withGroups = args[1] as Boolean
                     val updatedContact: Map<String, Any?>? =
                         FlutterContacts.update(resolver!!, contact, withGroups)
@@ -267,9 +268,9 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
             // Insert a new group and returns it.
             "insertGroup" ->
                 GlobalScope.launch(Dispatchers.IO) {
-                    val args = call.arguments as List<Any>
+                    val args = call.arguments as List<*>
                     val group = args[0] as Map<String, Any>
-                    val insertedGroup: Map<String, Any?>? =
+                    val insertedGroup: Map<String, Any?> =
                         FlutterContacts.insertGroup(resolver!!, group)
                     GlobalScope.launch(Dispatchers.Main) {
                         result.success(insertedGroup)
@@ -278,9 +279,9 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
             // Updates a group and returns it.
             "updateGroup" ->
                 GlobalScope.launch(Dispatchers.IO) {
-                    val args = call.arguments as List<Any>
+                    val args = call.arguments as List<*>
                     val group = args[0] as Map<String, Any>
-                    val updatedGroup: Map<String, Any?>? =
+                    val updatedGroup: Map<String, Any?> =
                         FlutterContacts.updateGroup(resolver!!, group)
                     GlobalScope.launch(Dispatchers.Main) {
                         result.success(updatedGroup)
@@ -289,7 +290,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
             // Deletes a group.
             "deleteGroup" ->
                 GlobalScope.launch(Dispatchers.IO) {
-                    val args = call.arguments as List<Any>
+                    val args = call.arguments as List<*>
                     val group = args[0] as Map<String, Any>
                     FlutterContacts.deleteGroup(resolver!!, group)
                     GlobalScope.launch(Dispatchers.Main) {
@@ -307,7 +308,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
             // Opens external contact app to edit existing contact.
             "openExternalEdit" ->
                 GlobalScope.launch(Dispatchers.IO) {
-                    val args = call.arguments as List<Any>
+                    val args = call.arguments as List<*>
                     val id = args[0] as String
                     FlutterContacts.openExternalViewOrEdit(activity, context, id, true)
                     editResult = result
@@ -321,7 +322,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
             // Opens external contact app to insert a new contact.
             "openExternalInsert" ->
                 GlobalScope.launch(Dispatchers.IO) {
-                    var args = call.arguments as List<Any>
+                    val args = call.arguments as List<Any>
                     val contact = args.getOrNull(0)?.let { it as? Map<String, Any?> } ?: run {
                         null
                     }
@@ -334,7 +335,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
 
     // --- StreamHandler implementation ---
 
-    var _eventObserver: ContactChangeObserver? = null
+    private var _eventObserver: ContactChangeObserver? = null
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         if (events != null) {

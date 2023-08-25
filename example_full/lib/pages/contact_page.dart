@@ -2,7 +2,6 @@ import 'package:after_layout/after_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_contacts_example/util/avatar.dart';
-import 'package:pretty_json/pretty_json.dart';
 
 class ContactPage extends StatefulWidget {
   @override
@@ -11,14 +10,16 @@ class ContactPage extends StatefulWidget {
 
 class _ContactPageState extends State<ContactPage>
     with AfterLayoutMixin<ContactPage> {
-  Contact _contact;
+  Contact? contact;
 
   @override
   void afterFirstLayout(BuildContext context) {
-    final contact = ModalRoute.of(context).settings.arguments as Contact;
-    setState(() {
-      _contact = contact;
-    });
+    if (ModalRoute.of(context) != null) {
+      setState(() {
+        contact = ModalRoute.of(context)!.settings.arguments as Contact;
+        ;
+      });
+    }
     _fetchContact();
   }
 
@@ -30,24 +31,26 @@ class _ContactPageState extends State<ContactPage>
     await _fetchContactWith(highRes: true);
   }
 
-  Future _fetchContactWith({@required bool highRes}) async {
-    final contact = await FlutterContacts.getContact(
-      _contact.id,
-      withThumbnail: !highRes,
-      withPhoto: highRes,
-      withGroups: true,
-      withAccounts: true,
-    );
-    setState(() {
-      _contact = contact;
-    });
+  Future _fetchContactWith({required bool highRes}) async {
+    if (contact != null) {
+      final _contact = await FlutterContacts.getContact(
+        contact!.id,
+        withThumbnail: !highRes,
+        withPhoto: highRes,
+        withGroups: true,
+        withAccounts: true,
+      );
+      setState(() {
+        contact = _contact;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_contact?.displayName ?? ''),
+        title: Text(contact == null ? "" : contact!.displayName),
         actions: [
           IconButton(
             icon: Icon(Icons.remove_red_eye),
@@ -55,8 +58,11 @@ class _ContactPageState extends State<ContactPage>
               await showDialog(
                 context: context,
                 builder: (_) => AlertDialog(
-                  content: Text(prettyJson(
-                      _contact.toJson(withPhoto: false, withThumbnail: false))),
+                  content: Text(contact == null
+                      ? ""
+                      : contact!
+                          .toJson(withPhoto: false, withThumbnail: false)
+                          .toString()),
                 ),
               );
             },
@@ -67,8 +73,8 @@ class _ContactPageState extends State<ContactPage>
               await showDialog(
                 context: context,
                 builder: (_) => AlertDialog(
-                  content: Text(
-                      _contact.toVCard(withPhoto: false, includeDate: true)),
+                  content: Text( contact == null ? "":
+                      contact!.toVCard(withPhoto: false, includeDate: true)),
                 ),
               );
             },
@@ -87,11 +93,11 @@ class _ContactPageState extends State<ContactPage>
           ),
         ],
       ),
-      body: _body(_contact),
+      body: _body(contact),
       floatingActionButton: FloatingActionButton(
         onPressed: () =>
             Navigator.of(context).pushNamed('/editContact', arguments: {
-          'contact': _contact,
+          'contact': contact,
           // A better solution would be to make [ContactPage] listen to DB
           // changes, but this will do for now
           'onUpdate': _fetchContact,
@@ -101,8 +107,8 @@ class _ContactPageState extends State<ContactPage>
     );
   }
 
-  Widget _body(Contact contact) {
-    if (_contact?.name == null) {
+  Widget _body(Contact? contact) {
+    if (contact == null) {
       return Center(child: CircularProgressIndicator());
     }
     return SingleChildScrollView(
@@ -244,8 +250,7 @@ class _ContactPageState extends State<ContactPage>
               [contact],
               (x) => [
                     Divider(),
-                    Text(prettyJson(
-                        x.toJson(withThumbnail: false, withPhoto: false))),
+                    Text(x.toJson(withThumbnail: false, withPhoto: false).toString()),
                   ]),
         ]),
       ),
@@ -253,7 +258,7 @@ class _ContactPageState extends State<ContactPage>
   }
 
   String _formatDate(Event e) =>
-      '${e.year?.toString()?.padLeft(4, '0') ?? '--'}/'
+      '${e.year?.toString().padLeft(4, '0') ?? '--'}/'
       '${e.month.toString().padLeft(2, '0')}/'
       '${e.day.toString().padLeft(2, '0')}';
 
@@ -266,7 +271,7 @@ class _ContactPageState extends State<ContactPage>
   Card _makeCard(
       String title, List fields, List<Widget> Function(dynamic) mapper) {
     var elements = <Widget>[];
-    fields?.forEach((field) => elements.addAll(mapper(field)));
+    fields.forEach((field) => elements.addAll(mapper(field)));
     return Card(
       child: Padding(
         padding: EdgeInsets.all(8),
@@ -282,13 +287,13 @@ class _ContactPageState extends State<ContactPage>
   }
 
   Future<void> _handleOverflowSelected(String choice) async {
-    if (choice == 'Delete contact') {
-      await _contact.delete();
+    if (choice == 'Delete contact' && contact != null) {
+      await contact!.delete();
       Navigator.of(context).pop();
-    } else if (choice == 'External view') {
-      await FlutterContacts.openExternalView(_contact.id);
-    } else if (choice == 'External edit') {
-      await FlutterContacts.openExternalEdit(_contact.id);
+    } else if (choice == 'External view' && contact != null) {
+      await FlutterContacts.openExternalView(contact!.id);
+    } else if (choice == 'External edit' && contact != null) {
+      await FlutterContacts.openExternalEdit(contact!.id);
     }
   }
 }
