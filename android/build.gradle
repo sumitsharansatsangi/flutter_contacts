@@ -33,7 +33,6 @@ android {
     }
 
     ndkVersion '25.2.9519653'
-    ndkPath '/home/sumit/Android/Sdk/ndk/25.2.9519653'
     externalNativeBuild {
         cmake {
             version = "3.22.1"
@@ -52,7 +51,7 @@ android {
     }
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 33
+        targetSdkVersion 34
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
      lintOptions {
