@@ -22,7 +22,7 @@ class _PhoneFormState extends State<PhoneForm> {
   static final _validLabels = PhoneLabel.values;
 
   late TextEditingController _numberController;
-  late PhoneLabel _label;
+  PhoneLabel? _label;
   late TextEditingController _customLabelController;
 
   @override
@@ -35,11 +35,13 @@ class _PhoneFormState extends State<PhoneForm> {
   }
 
   void _onChanged() {
-    final phone = Phone(_numberController.text,
-        label: _label,
-        customLabel:
-            _label == PhoneLabel.custom ? _customLabelController.text : '');
-    widget.onUpdate(phone);
+    if (_label != null) {
+      final phone = Phone(_numberController.text,
+          label: _label!,
+          customLabel:
+              _label == PhoneLabel.custom ? _customLabelController.text : '');
+      widget.onUpdate(phone);
+    }
   }
 
   @override

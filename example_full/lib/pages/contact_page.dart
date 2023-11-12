@@ -2,6 +2,7 @@ import 'package:after_layout/after_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_contacts_example/util/avatar.dart';
+import 'package:pretty_json/pretty_json.dart';
 
 class ContactPage extends StatefulWidget {
   @override
@@ -10,16 +11,14 @@ class ContactPage extends StatefulWidget {
 
 class _ContactPageState extends State<ContactPage>
     with AfterLayoutMixin<ContactPage> {
-  Contact? contact;
+  Contact? _contact;
 
   @override
   void afterFirstLayout(BuildContext context) {
-    if (ModalRoute.of(context) != null) {
-      setState(() {
-        contact = ModalRoute.of(context)!.settings.arguments as Contact;
-        ;
-      });
-    }
+    final contact = ModalRoute.of(context)?.settings.arguments as Contact?;
+    setState(() {
+      _contact = contact;
+    });
     _fetchContact();
   }
 
@@ -32,16 +31,16 @@ class _ContactPageState extends State<ContactPage>
   }
 
   Future _fetchContactWith({required bool highRes}) async {
-    if (contact != null) {
-      final _contact = await FlutterContacts.getContact(
-        contact!.id,
+    if (_contact != null) {
+      final contact = await FlutterContacts.getContact(
+        _contact!.id,
         withThumbnail: !highRes,
         withPhoto: highRes,
         withGroups: true,
         withAccounts: true,
       );
       setState(() {
-        contact = _contact;
+        _contact = contact;
       });
     }
   }
@@ -50,7 +49,7 @@ class _ContactPageState extends State<ContactPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(contact == null ? "" : contact!.displayName),
+        title: Text(_contact == null ? "" : _contact!.displayName),
         actions: [
           IconButton(
             icon: Icon(Icons.remove_red_eye),
@@ -58,11 +57,8 @@ class _ContactPageState extends State<ContactPage>
               await showDialog(
                 context: context,
                 builder: (_) => AlertDialog(
-                  content: Text(contact == null
-                      ? ""
-                      : contact!
-                          .toJson(withPhoto: false, withThumbnail: false)
-                          .toString()),
+                  content: Text(prettyJson(_contact?.toJson(
+                      withPhoto: false, withThumbnail: false))),
                 ),
               );
             },
@@ -73,8 +69,10 @@ class _ContactPageState extends State<ContactPage>
               await showDialog(
                 context: context,
                 builder: (_) => AlertDialog(
-                  content: Text( contact == null ? "":
-                      contact!.toVCard(withPhoto: false, includeDate: true)),
+                  content: Text(
+                    _contact?.toVCard(withPhoto: false, includeDate: true) ??
+                        '',
+                  ),
                 ),
               );
             },
@@ -93,11 +91,11 @@ class _ContactPageState extends State<ContactPage>
           ),
         ],
       ),
-      body: _body(contact),
+      body: _body(_contact),
       floatingActionButton: FloatingActionButton(
         onPressed: () =>
             Navigator.of(context).pushNamed('/editContact', arguments: {
-          'contact': contact,
+          'contact': _contact,
           // A better solution would be to make [ContactPage] listen to DB
           // changes, but this will do for now
           'onUpdate': _fetchContact,
@@ -287,13 +285,15 @@ class _ContactPageState extends State<ContactPage>
   }
 
   Future<void> _handleOverflowSelected(String choice) async {
-    if (choice == 'Delete contact' && contact != null) {
-      await contact!.delete();
-      Navigator.of(context).pop();
-    } else if (choice == 'External view' && contact != null) {
-      await FlutterContacts.openExternalView(contact!.id);
-    } else if (choice == 'External edit' && contact != null) {
-      await FlutterContacts.openExternalEdit(contact!.id);
+    if (_contact != null) {
+      if (choice == 'Delete contact') {
+        await _contact!.delete();
+        Navigator.of(context).pop();
+      } else if (choice == 'External view') {
+        await FlutterContacts.openExternalView(_contact!.id);
+      } else if (choice == 'External edit') {
+        await FlutterContacts.openExternalEdit(_contact!.id);
+      }
     }
   }
 }

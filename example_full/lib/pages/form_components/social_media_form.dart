@@ -22,7 +22,7 @@ class _SocialMediaFormState extends State<SocialMediaForm> {
   static final _validLabels = SocialMediaLabel.values;
 
   late TextEditingController _userNameController;
-  late SocialMediaLabel _label;
+  SocialMediaLabel? _label;
   late TextEditingController _customLabelController;
 
   @override
@@ -36,13 +36,16 @@ class _SocialMediaFormState extends State<SocialMediaForm> {
   }
 
   void _onChanged() {
-    final socialMedia = SocialMedia(
-      _userNameController.text,
-      label: _label,
-      customLabel:
-          _label == SocialMediaLabel.custom ? _customLabelController.text : '',
-    );
-    widget.onUpdate(socialMedia);
+    if (_label != null) {
+      final socialMedia = SocialMedia(
+        _userNameController.text,
+        label: _label!,
+        customLabel: _label == SocialMediaLabel.custom
+            ? _customLabelController.text
+            : '',
+      );
+      widget.onUpdate(socialMedia);
+    }
   }
 
   @override

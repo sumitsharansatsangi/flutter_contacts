@@ -22,7 +22,7 @@ class _EditContactPageState extends State<EditContactPage>
     with AfterLayoutMixin<EditContactPage> {
   Contact contact = Contact();
   bool isEdit = false;
-  void Function()? onUpdate;
+  void Function()? _onUpdate;
 
   final _imagePicker = ImagePicker();
 
@@ -35,7 +35,7 @@ class _EditContactPageState extends State<EditContactPage>
       setState(() {
         contact = args['contact'];
         isEdit = true;
-        onUpdate = args['onUpdate'];
+        _onUpdate = args['onUpdate'];
       });
     }
   }
@@ -78,7 +78,7 @@ class _EditContactPageState extends State<EditContactPage>
               } else {
                 await contact.insert();
               }
-              if (onUpdate != null) onUpdate!();
+              if (_onUpdate != null) _onUpdate!();
               Navigator.of(context).pop();
             },
           ),
@@ -150,9 +150,9 @@ class _EditContactPageState extends State<EditContactPage>
   Card _fieldCard(
     String fieldName,
     List<dynamic> fields,
-    /* void | Future<void> */ Function() addField,
+    Function()? addField,
     Widget Function(int, dynamic) formWidget,
-    void Function() clearAllFields, {
+    void Function()? clearAllFields, {
     bool createAsync = false,
   }) {
     var forms = <Widget>[
@@ -162,12 +162,12 @@ class _EditContactPageState extends State<EditContactPage>
     void Function() onPressed;
     if (createAsync) {
       onPressed = () async {
-        await addField();
+        await addField?.call();
         setState(() {});
       };
     } else {
       onPressed = () => setState(() {
-            addField();
+            addField?.call();
           });
     }
     var buttons = <ElevatedButton>[];
@@ -179,7 +179,7 @@ class _EditContactPageState extends State<EditContactPage>
     );
       buttons.add(ElevatedButton(
       onPressed: () {
-        clearAllFields();
+        clearAllFields!();
         setState(() {});
       },
       child: Text('Delete all'),

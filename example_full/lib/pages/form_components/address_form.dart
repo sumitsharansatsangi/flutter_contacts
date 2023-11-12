@@ -22,7 +22,7 @@ class _AddressFormState extends State<AddressForm> {
   static final _validLabels = AddressLabel.values;
 
   late TextEditingController _addressController;
-  late AddressLabel _label;
+  AddressLabel? _label;
   late TextEditingController _customLabelController;
   late TextEditingController _streetController;
   late TextEditingController _poboxController;
@@ -60,23 +60,25 @@ class _AddressFormState extends State<AddressForm> {
   }
 
   void _onChanged() {
-    final address = Address(
-      _addressController.text,
-      label: _label,
-      customLabel:
-          _label == AddressLabel.custom ? _customLabelController.text : '',
-      street: _streetController.text,
-      pobox: _poboxController.text,
-      neighborhood: _neighborhoodController.text,
-      city: _cityController.text,
-      state: _stateController.text,
-      postalCode: _postalCodeController.text,
-      country: _countryController.text,
-      isoCountry: _isoCountryController.text,
-      subAdminArea: _subAdminAreaController.text,
-      subLocality: _subLocalityController.text,
-    );
-    widget.onUpdate(address);
+    if (_label != null) {
+      final address = Address(
+        _addressController.text,
+        label: _label!,
+        customLabel:
+            _label == AddressLabel.custom ? _customLabelController.text : '',
+        street: _streetController.text,
+        pobox: _poboxController.text,
+        neighborhood: _neighborhoodController.text,
+        city: _cityController.text,
+        state: _stateController.text,
+        postalCode: _postalCodeController.text,
+        country: _countryController.text,
+        isoCountry: _isoCountryController.text,
+        subAdminArea: _subAdminAreaController.text,
+        subLocality: _subLocalityController.text,
+      );
+      widget.onUpdate(address);
+    }
   }
 
   @override

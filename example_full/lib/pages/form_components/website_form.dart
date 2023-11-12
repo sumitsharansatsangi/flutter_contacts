@@ -22,7 +22,7 @@ class _WebsiteFormState extends State<WebsiteForm> {
   static final _validLabels = WebsiteLabel.values;
 
   late TextEditingController _urlController;
-  late WebsiteLabel _label;
+  WebsiteLabel? _label;
   late TextEditingController _customLabelController;
 
   @override
@@ -35,13 +35,15 @@ class _WebsiteFormState extends State<WebsiteForm> {
   }
 
   void _onChanged() {
-    final website = Website(
-      _urlController.text,
-      label: _label,
-      customLabel:
-          _label == WebsiteLabel.custom ? _customLabelController.text : '',
-    );
-    widget.onUpdate(website);
+    if (_label != null) {
+      final website = Website(
+        _urlController.text,
+        label: _label!,
+        customLabel:
+            _label == WebsiteLabel.custom ? _customLabelController.text : '',
+      );
+      widget.onUpdate(website);
+    }
   }
 
   @override

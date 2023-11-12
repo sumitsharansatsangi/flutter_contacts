@@ -22,15 +22,15 @@ class _EventFormState extends State<EventForm> {
   static final _validLabels = EventLabel.values;
 
   late TextEditingController _dateController;
-  late EventLabel _label;
+  EventLabel? _label;
   late TextEditingController _customLabelController;
-  late int _year;
-  late int _month;
-  late int _day;
-  late bool _noYear;
+  int? _year;
+  int? _month;
+  int? _day;
+  bool? _noYear;
 
   String _formatDate() =>
-      '${_noYear ? '--' : _year.toString().padLeft(4, '0')}/'
+      '${_noYear ?? false ? '--' : _year.toString().padLeft(4, '0')}/'
       '${_month.toString().padLeft(2, '0')}/'
       '${_day.toString().padLeft(2, '0')}';
 
@@ -49,10 +49,10 @@ class _EventFormState extends State<EventForm> {
 
   void _onChanged() {
     final event = Event(
-      year: _noYear ? null : _year,
-      month: _month,
-      day: _day,
-      label: _label,
+      year: _noYear ?? false ? null : _year,
+      month: _month ?? 0,
+      day: _day ?? 0,
+      label: _label ?? EventLabel.other,
       customLabel:
           _label == EventLabel.custom ? _customLabelController.text : '',
     );
