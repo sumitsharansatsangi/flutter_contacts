@@ -9,7 +9,6 @@ import android.content.pm.PackageManager
 import android.provider.ContactsContract
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.annotation:annotation.NonNull
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -52,7 +51,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
         resolver = context!!.contentResolver
     }
 
-    override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         coroutineScope.cancel()
     }
 
@@ -328,7 +327,7 @@ class FlutterContactsPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Str
             // Opens external contact app to insert a new contact.
             "openExternalInsert" ->
                 coroutineScope.launch(Dispatchers.IO) {
-                    var args = call.arguments as List<Any>
+                    val args = call.arguments as List<Any>
                     val contact = args.getOrNull(0)?.let { it as? Map<String, Any?> } ?: run {
                         null
                     }
