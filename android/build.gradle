@@ -26,13 +26,13 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 34
+    compileSdk 34
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    ndkVersion '26.0.10792818'
+    ndkVersion '26.1.10909125'
 
     kotlinOptions {
         jvmTarget = '17'
